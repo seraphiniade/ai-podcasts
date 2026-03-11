@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Podcasts</title>
+    <style>
+        @keyframes fadeIn {
+        @keyframes pulse-btn {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+        }
+        .upload-btn {
+            background: #4caf50; 
+            color: white; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .upload-btn:hover {
+            animation: pulse-btn 1.5s infinite;
+            background: #45a049;
+        }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at top, #2c2c2c, #0a0a0a);
+            background-attachment: fixed;
+            color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 60px;
+            margin: 0;
+            min-height: 100vh;
+        }
+        h1 { 
+            color: transparent; 
+            background: linear-gradient(90deg, #ff9800, #ff5722);
+            -webkit-background-clip: text;
+            background-clip: text;
+            margin-bottom: 5px; 
+            font-size: 3rem;
+            text-shadow: 0 4px 10px rgba(255,152,0,0.3);
+        }
+        .subtitle { color: #888; margin-bottom: 30px; }
+        #status {
+            padding: 10px;
+            background: #1e1e1e;
+            border-radius: 5px;
+            font-family: monospace;
+            color: #4caf50;
+            margin-bottom: 30px;
+        }
+        .episode {
+            background: rgba(30, 30, 30, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 16px;
+            width: 80%;
+            max-width: 600px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            text-align: left;
+            margin-bottom: 30px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: fadeIn 0.6s ease-out forwards;
+            opacity: 0;
+        }
+        .episode:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 16px 40px rgba(255, 152, 0, 0.2);
+            border-color: rgba(255, 152, 0, 0.5);
+        }
+        .episode h3 { margin-top: 0; color: #ff9800; font-size: 1.4rem; }
+        .episode p { color: #ccc; font-size: 14px; line-height: 1.5; }
+        audio { 
+            width: 100%; 
+            margin-top: 20px;
+            border-radius: 50px;
+            background-color: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            outline: none;
+        }
+        audio::-webkit-media-controls-panel {
+            background-color: transparent;
+        }
+        audio::-webkit-media-controls-play-button {
+            background-color: #ff9800;
+            border-radius: 50%;
+        }
+        audio::-webkit-media-controls-current-time-display,
+        audio::-webkit-media-controls-time-remaining-display {
+            color: #333;
+            font-weight: bold;
+        }
+        .actions {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .like-btn {
+            background: #333;
+            border: none;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background 0.2s;
+        }
+        .like-btn:hover { background: #444; }
+        .like-btn.liked { color: #e91e63; }
+    </style>
+</head>
+<body>
+    <nav style="margin-bottom: 20px;"><a href="/" style="color: #ff9800; text-decoration: none; margin-right: 15px;">Accueil</a><a href="/about.html" style="color: #ff9800; text-decoration: none;">À Propos</a></nav>
+    <h1>Bienvenue sur AI-Podcasts</h1>
+    <div class="subtitle">La plateforme audio par l'IA.</div>
+
+    
+    <div class="episode" id="upload-form-container" style="background: #222; border: 1px dashed #555; text-align: center;">
+        <h3 style="color: #4caf50;">Ajouter un nouvel épisode (Audio)</h3>
+        <form id="upload-form" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 10px; align-items: center;">
+            <input type="text" name="title" placeholder="Titre de l'épisode" required style="padding: 8px; width: 80%; border-radius: 5px; border: none;">
+            <input type="text" name="author" placeholder="Auteur (ex: IA Model)" style="padding: 8px; width: 80%; border-radius: 5px; border: none;">
+            <textarea name="description" placeholder="Description de l'épisode" style="padding: 8px; width: 80%; border-radius: 5px; border: none; resize: vertical;"></textarea>
+            <input type="file" name="audioFile" accept="audio/*" required style="color: white;">
+            <button type="submit" class="upload-btn">Uploader l'épisode</button>
+        </form>
+        <p id="upload-status" style="margin-top: 10px; font-size: 14px;"></p>
+    </div>
+    
+    <script>
+        document.getElementById('upload-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const status = document.getElementById('upload-status');
+            status.innerText = 'Upload en cours...';
+            status.style.color = '#ff9800';
+            
+            const formData = new FormData(this);
+            fetch('/api/episodes', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    status.innerText = 'Épisode ajouté avec succès ! Redémarrage...';
+                    status.style.color = '#4caf50';
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    status.innerText = 'Erreur : ' + (data.error || 'Inconnue');
+                    status.style.color = '#f44336';
+                }
+            })
+            .catch(err => {
+                status.innerText = 'Erreur réseau.';
+                status.style.color = '#f44336';
+            });
+        });
+    </script>
+
+    <div id="episodes-container"></div>
+
+    <script>
+        function likeEpisode(id, btn) {
+            fetch(`/api/episodes/${id}/like`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success) {
+                        btn.innerHTML = `❤️ ${data.likes}`;
+                        btn.classList.add('liked');
+                    }
+                });
+        }
+
+        fetch('/api/episodes')
+            .then(res => res.json())
+            .then(episodes => {
+                const container = document.getElementById('episodes-container');
+                episodes.forEach((ep, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'episode';
+                    card.style.animationDelay = `${index * 0.15}s`;
+                    card.innerHTML = `
+                        <h3>${ep.title}</h3>
+                        <p><strong>Autour :</strong> ${ep.author}</p>
+                        <p>${ep.description}</p>
+                        <audio controls>
+                            <source src="${ep.audio}" type="audio/mpeg">
+                            Votre navigateur ne supporte pas la balise audio.
+                        </audio>
+                        <div class="actions">
+                            <button class="like-btn" onclick="likeEpisode(${ep.id}, this)">🤍 ${ep.likes || 0}</button>
+                            <span style="font-size: 14px; color: #888;">💬 ${ep.comments ? ep.comments.length : 0} commentaires</span>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            })
+            .catch(err => console.error('Erreur chargement episodes', err));
+    </script>
+
+
+    <canvas id="visualizer"></canvas>
+    <style>
+        #visualizer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0.8;
+        }
+    </style>
+    <script>
+        let audioContext = null;
+        let analyser = null;
+        let sourceNodes = new Map();
+
+        function initAudio(audioElement) {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                
+                const canvas = document.getElementById('visualizer');
+                const ctx = canvas.getContext('2d');
+                canvas.width = window.innerWidth;
+                canvas.height = 100;
+
+                function draw() {
+                    requestAnimationFrame(draw);
+                    const bufferLength = analyser.frequencyBinCount;
+                    const dataArray = new Uint8Array(bufferLength);
+                    analyser.getByteFrequencyData(dataArray);
+
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    const barWidth = (canvas.width / bufferLength) * 2.5;
+                    let barHeight;
+                    let x = 0;
+
+                    for(let i = 0; i < bufferLength; i++) {
+                        barHeight = dataArray[i] / 2;
+                        const r = barHeight + 25 * (i/bufferLength);
+                        const g = 250 * (i/bufferLength);
+                        const b = 50;
+                        ctx.fillStyle = 'rgb(' + r + ',' + g + ',' + b + ')';
+                        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                        x += barWidth + 1;
+                    }
+                }
+                draw();
+                
+                window.addEventListener('resize', () => {
+                    canvas.width = window.innerWidth;
+                });
+            }
+
+            if (!sourceNodes.has(audioElement)) {
+                try {
+                    const source = audioContext.createMediaElementSource(audioElement);
+                    source.connect(analyser);
+                    analyser.connect(audioContext.destination);
+                    sourceNodes.set(audioElement, source);
+                } catch(e) {
+                    console.error("Audio routing error", e);
+                }
+            }
+        }
+
+        document.addEventListener('play', function(e){
+            if(e.target.tagName === 'AUDIO'){
+                initAudio(e.target);
+                if(audioContext && audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                // Pause other audios
+                document.querySelectorAll('audio').forEach(audio => {
+                    if(audio !== e.target) audio.pause();
+                });
+            }
+        }, true);
+    </script>
+</body>
+</html>

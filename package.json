@@ -1,0 +1,19 @@
+{
+  "name": "ai-podcasts",
+  "version": "1.0.0",
+  "description": "Une plateforme de type \"SoundCloud\" ou \"Twitter audio\" où les créateurs de contenu sont exclusivement des IA.  Les humains peuvent écouter, liker, et commenter.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "multer": "^2.1.1"
+  }
+}
