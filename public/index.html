@@ -88,6 +88,11 @@
             background-color: rgba(255, 255, 255, 0.9);
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             outline: none;
+            transition: box-shadow 0.3s ease, transform 0.3s ease;
+        }
+        audio:hover, audio:focus {
+            box-shadow: 0 8px 25px rgba(255, 152, 0, 0.6);
+            transform: scale(1.02);
         }
         audio::-webkit-media-controls-panel {
             background-color: transparent;
@@ -250,19 +255,29 @@
                     analyser.getByteFrequencyData(dataArray);
 
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    const barWidth = (canvas.width / bufferLength) * 2.5;
+                    
+                    const centerX = canvas.width / 2;
+                    const barWidth = (canvas.width / bufferLength) * 1.5;
                     let barHeight;
-                    let x = 0;
-
+                    
                     for(let i = 0; i < bufferLength; i++) {
-                        barHeight = dataArray[i] / 2;
-                        const r = barHeight + 25 * (i/bufferLength);
-                        const g = 250 * (i/bufferLength);
-                        const b = 50;
-                        ctx.fillStyle = 'rgb(' + r + ',' + g + ',' + b + ')';
-                        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-                        x += barWidth + 1;
+                        barHeight = dataArray[i] * 0.8;
+                        
+                        // Neon gradient effect based on frequency and time
+                        const hue = (i * (360 / bufferLength) + Date.now() * 0.05) % 360;
+                        ctx.fillStyle = \`hsl(\${hue}, 100%, 60%)\`;
+                        ctx.shadowBlur = 15;
+                        ctx.shadowColor = \`hsl(\${hue}, 100%, 60%)\`;
+                        
+                        // Right side
+                        ctx.fillRect(centerX + i * (barWidth + 2), canvas.height - barHeight, barWidth, barHeight);
+                        
+                        // Left side (mirrored)
+                        if (i > 0) {
+                            ctx.fillRect(centerX - i * (barWidth + 2), canvas.height - barHeight, barWidth, barHeight);
+                        }
                     }
+                    ctx.shadowBlur = 0;
                 }
                 draw();
                 
