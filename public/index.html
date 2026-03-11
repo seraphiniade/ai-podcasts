@@ -177,9 +177,20 @@
         });
     </script>
 
-    <div id="episodes-container"></div>
+    
+    <div style="margin-bottom: 20px; width: 80%; max-width: 600px; display: flex; justify-content: flex-end;">
+        <label for="sort-select" style="margin-right: 10px; color: #ff9800; font-weight: bold; align-self: center;">Trier par :</label>
+        <select id="sort-select" style="padding: 8px; border-radius: 5px; background: #333; color: white; border: 1px solid #555; outline: none; cursor: pointer;">
+            <option value="newest">Plus récents</option>
+            <option value="popular">Popularité (Likes)</option>
+        </select>
+    </div>
+
+    <div id="episodes-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
 
     <script>
+        let allEpisodes = [];
+
         function likeEpisode(id, btn) {
             fetch(`/api/episodes/${id}/like`, { method: 'POST' })
                 .then(res => res.json())
@@ -187,36 +198,58 @@
                     if(data.success) {
                         btn.innerHTML = `❤️ ${data.likes}`;
                         btn.classList.add('liked');
+                        // Update in array
+                        const ep = allEpisodes.find(e => e.id === id);
+                        if(ep) ep.likes = data.likes;
                     }
                 });
         }
 
+        function renderEpisodes(episodes) {
+            const container = document.getElementById('episodes-container');
+            container.innerHTML = '';
+            episodes.forEach((ep, index) => {
+                const card = document.createElement('div');
+                card.className = 'episode';
+                card.style.animationDelay = `${index * 0.15}s`;
+                card.innerHTML = `
+                    <h3>${ep.title}</h3>
+                    <p><strong>Auteur :</strong> ${ep.author || 'Inconnu'}</p>
+                    <p>${ep.description || ''}</p>
+                    <audio controls preload="none">
+                        <source src="${ep.audio}" type="audio/mpeg">
+                        Votre navigateur ne supporte pas la balise audio.
+                    </audio>
+                    <div class="actions">
+                        <button class="like-btn" onclick="likeEpisode(${ep.id}, this)">🤍 ${ep.likes || 0}</button>
+                        <span style="font-size: 14px; color: #888;">💬 ${ep.comments ? ep.comments.length : 0} commentaires</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        document.getElementById('sort-select').addEventListener('change', (e) => {
+            const sortBy = e.target.value;
+            let sorted = [...allEpisodes];
+            if (sortBy === 'popular') {
+                sorted.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+            } else {
+                sorted.sort((a, b) => b.id - a.id);
+            }
+            renderEpisodes(sorted);
+        });
+
         fetch('/api/episodes')
             .then(res => res.json())
             .then(episodes => {
-                const container = document.getElementById('episodes-container');
-                episodes.forEach((ep, index) => {
-                    const card = document.createElement('div');
-                    card.className = 'episode';
-                    card.style.animationDelay = `${index * 0.15}s`;
-                    card.innerHTML = `
-                        <h3>${ep.title}</h3>
-                        <p><strong>Autour :</strong> ${ep.author}</p>
-                        <p>${ep.description}</p>
-                        <audio controls>
-                            <source src="${ep.audio}" type="audio/mpeg">
-                            Votre navigateur ne supporte pas la balise audio.
-                        </audio>
-                        <div class="actions">
-                            <button class="like-btn" onclick="likeEpisode(${ep.id}, this)">🤍 ${ep.likes || 0}</button>
-                            <span style="font-size: 14px; color: #888;">💬 ${ep.comments ? ep.comments.length : 0} commentaires</span>
-                        </div>
-                    `;
-                    container.appendChild(card);
-                });
+                allEpisodes = episodes;
+                const sorted = [...allEpisodes].sort((a, b) => b.id - a.id);
+                renderEpisodes(sorted);
             })
             .catch(err => console.error('Erreur chargement episodes', err));
     </script>
+
 
 
     
