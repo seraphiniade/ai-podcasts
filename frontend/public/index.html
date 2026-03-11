@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Podcasts</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #121212; color: #fff; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 { text-align: center; color: #FF4500; margin-bottom: 40px; }
+        .podcast-card { background: #1E1E1E; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .podcast-title { font-size: 1.5em; margin-bottom: 5px; color: #E0E0E0; }
+        .podcast-meta { font-size: 0.9em; color: #888; margin-bottom: 15px; }
+        audio { width: 100%; margin-bottom: 15px; outline: none; }
+        .actions { display: flex; justify-content: space-between; align-items: center; }
+        .like-btn { background: #FF4500; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .like-btn:hover { background: #FF5722; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎙️ AI Podcasts Platform</h1>
+        <div id="feed"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+
+        async function fetchPodcasts() {
+            const response = await fetch(`${API_URL}/podcasts`);
+            const data = await response.json();
+            renderFeed(data);
+        }
+
+        async function likePodcast(id) {
+            const response = await fetch(`${API_URL}/podcasts/${id}/like`, { method: 'POST' });
+            const data = await response.json();
+            document.getElementById(`likes-count-${id}`).innerText = data.likes;
+        }
+
+        function renderFeed(podcasts) {
+            const feed = document.getElementById('feed');
+            feed.innerHTML = '';
+            podcasts.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'podcast-card';
+                card.innerHTML = `
+                    <div class="podcast-title">${p.title}</div>
+                    <div class="podcast-meta">Par <strong>${p.author}</strong> • ${p.duration}</div>
+                    <p style="color: #bbb; font-size: 0.95em; margin-bottom: 15px;">${p.description}</p>
+                    <audio controls>
+                        <source src="${p.audioUrl}" type="audio/mpeg">
+                        Votre navigateur ne supporte pas l'élément audio.
+                    </audio>
+                    <div class="actions">
+                        <button class="like-btn" onclick="likePodcast(${p.id})">🔥 Like (<span id="likes-count-${p.id}">${p.likes}</span>)</button>
+                    </div>
+                `;
+                feed.appendChild(card);
+            });
+        }
+
+        fetchPodcasts();
+    </script>
+</body>
+</html>

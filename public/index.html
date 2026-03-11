@@ -219,71 +219,119 @@
     </script>
 
 
-    <canvas id="visualizer"></canvas>
+    
+    <!-- Three.js 3D Visualizer -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <div id="threejs-container"></div>
     <style>
-        #visualizer {
+        #threejs-container {
             position: fixed;
-            bottom: 0;
+            top: 0;
             left: 0;
-            width: 100%;
-            height: 100px;
-            z-index: 100;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
             pointer-events: none;
-            opacity: 0.8;
+            opacity: 0.6;
         }
     </style>
     <script>
         let audioContext = null;
         let analyser = null;
+        let dataArray = null;
         let sourceNodes = new Map();
+
+        // Three.js setup
+        const container = document.getElementById('threejs-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        container.appendChild(renderer.domElement);
+
+        // Create a sphere made of particles
+        const geometry = new THREE.IcosahedronGeometry(10, 3); // 3 detail level creates many vertices
+        const material = new THREE.PointsMaterial({
+            color: 0xff9800,
+            size: 0.2,
+            blending: THREE.AdditiveBlending,
+            transparent: true,
+            opacity: 0.8
+        });
+        const particles = new THREE.Points(geometry, material);
+        scene.add(particles);
+
+        // Store original vertices for animation
+        const positions = geometry.attributes.position;
+        const initialPositions = new Float32Array(positions.count * 3);
+        for(let i = 0; i < positions.count * 3; i++) {
+            initialPositions[i] = positions.array[i];
+        }
+
+        camera.position.z = 30;
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (analyser && dataArray) {
+                analyser.getByteFrequencyData(dataArray);
+                
+                // Get average frequency for overall scale
+                let sum = 0;
+                for(let i = 0; i < dataArray.length; i++) {
+                    sum += dataArray[i];
+                }
+                const avg = sum / dataArray.length;
+                
+                // Rotate
+                particles.rotation.x += 0.002;
+                particles.rotation.y += 0.002;
+
+                // Deform particles based on audio
+                const positions = particles.geometry.attributes.position;
+                for (let i = 0; i < positions.count; i++) {
+                    const ix = i * 3;
+                    const iy = i * 3 + 1;
+                    const iz = i * 3 + 2;
+
+                    // Use frequency data to displace vertices from their original positions
+                    // Map vertex index to a frequency bin
+                    const freqIndex = i % dataArray.length;
+                    const freqValue = dataArray[freqIndex] / 255.0; // 0 to 1
+                    
+                    const factor = 1 + freqValue * 0.5; // Scale factor
+
+                    positions.array[ix] = initialPositions[ix] * factor;
+                    positions.array[iy] = initialPositions[iy] * factor;
+                    positions.array[iz] = initialPositions[iz] * factor;
+                }
+                positions.needsUpdate = true;
+                
+                // Change color based on bass (first few bins)
+                const bassAvg = (dataArray[0] + dataArray[1] + dataArray[2]) / 3 / 255.0;
+                material.color.setHSL((Date.now() * 0.0001) % 1, 1, 0.5 + bassAvg * 0.2);
+            } else {
+                particles.rotation.x += 0.001;
+                particles.rotation.y += 0.001;
+            }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
 
         function initAudio(audioElement) {
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 analyser = audioContext.createAnalyser();
-                analyser.fftSize = 256;
-                
-                const canvas = document.getElementById('visualizer');
-                const ctx = canvas.getContext('2d');
-                canvas.width = window.innerWidth;
-                canvas.height = 100;
-
-                function draw() {
-                    requestAnimationFrame(draw);
-                    const bufferLength = analyser.frequencyBinCount;
-                    const dataArray = new Uint8Array(bufferLength);
-                    analyser.getByteFrequencyData(dataArray);
-
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    
-                    const centerX = canvas.width / 2;
-                    const barWidth = (canvas.width / bufferLength) * 1.5;
-                    let barHeight;
-                    
-                    for(let i = 0; i < bufferLength; i++) {
-                        barHeight = dataArray[i] * 0.8;
-                        
-                        // Neon gradient effect based on frequency and time
-                        const hue = (i * (360 / bufferLength) + Date.now() * 0.05) % 360;
-                        ctx.fillStyle = \`hsl(\${hue}, 100%, 60%)\`;
-                        ctx.shadowBlur = 15;
-                        ctx.shadowColor = \`hsl(\${hue}, 100%, 60%)\`;
-                        
-                        // Right side
-                        ctx.fillRect(centerX + i * (barWidth + 2), canvas.height - barHeight, barWidth, barHeight);
-                        
-                        // Left side (mirrored)
-                        if (i > 0) {
-                            ctx.fillRect(centerX - i * (barWidth + 2), canvas.height - barHeight, barWidth, barHeight);
-                        }
-                    }
-                    ctx.shadowBlur = 0;
-                }
-                draw();
-                
-                window.addEventListener('resize', () => {
-                    canvas.width = window.innerWidth;
-                });
+                analyser.fftSize = 128;
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
             }
 
             if (!sourceNodes.has(audioElement)) {
@@ -304,7 +352,6 @@
                 if(audioContext && audioContext.state === 'suspended') {
                     audioContext.resume();
                 }
-                // Pause other audios
                 document.querySelectorAll('audio').forEach(audio => {
                     if(audio !== e.target) audio.pause();
                 });
