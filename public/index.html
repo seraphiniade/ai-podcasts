@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI-Podcasts</title>
     <style>
-        @keyframes fadeIn {
+         
+@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse-btn {
             0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
             50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
@@ -24,9 +25,6 @@
         .upload-btn:hover {
             animation: pulse-btn 1.5s infinite;
             background: #45a049;
-        }
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -59,20 +57,29 @@
             margin-bottom: 30px;
         }
         .episode {
-            background: rgba(30, 30, 30, 0.7);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(25px) saturate(200%);
+            -webkit-backdrop-filter: blur(25px) saturate(200%);
             padding: 25px;
-            border-radius: 16px;
+            border-radius: 20px;
             width: 80%;
             max-width: 600px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
             text-align: left;
             margin-bottom: 30px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            animation: fadeIn 0.6s ease-out forwards;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease, border-color 0.4s ease;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            animation: fadeIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
             opacity: 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .episode::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+            pointer-events: none;
         }
         .episode:hover {
             transform: translateY(-8px);
@@ -392,5 +399,61 @@
         }, true);
     </script>
 <script src="visualizer.js"></script>
+    <script>
+        // 2026 UI Trend: "Zero UI" Subtle Audio Feedback
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSubtleClick() {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.05);
+            
+            gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime); // Very subtle
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+            
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.05);
+        }
+
+        document.addEventListener('click', (e) => {
+            if(e.target.tagName.toLowerCase() === 'button' || e.target.classList.contains('clickable') || e.target.tagName.toLowerCase() === 'input') {
+                playSubtleClick();
+            }
+        });
+    </script>
 </body>
 </html>
+// 2026 UI Trend: "Zero UI" Subtle Audio Feedback
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSubtleClick() {
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.05);
+    
+    gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime); // Very subtle
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+    
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.05);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.body.addEventListener('click', (e) => {
+        if(e.target.tagName.toLowerCase() === 'button' || e.target.classList.contains('clickable')) {
+            playSubtleClick();
+        }
+    });
+});
