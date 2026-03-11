@@ -81,12 +81,21 @@ app.post('/api/generate', async (req, res) => {
     const getUrl = prediction.urls.get;
 
     // Polling until finished
-    while (['starting', 'processing'].includes(prediction.status)) {
+    let maxRetries = 60; // Max 2 minutes
+    while (['starting', 'processing'].includes(prediction.status) && maxRetries > 0) {
       await new Promise(r => setTimeout(r, 2000));
       const pollRes = await fetch(getUrl, {
         headers: { 'Authorization': `Bearer ${replicateToken}` }
       });
+      if (!pollRes.ok) {
+        throw new Error(`Polling request failed: ${pollRes.statusText}`);
+      }
       prediction = await pollRes.json();
+      maxRetries--;
+    }
+    
+    if (maxRetries === 0) {
+      return res.status(504).json({ error: 'Replicate prediction timed out' });
     }
 
     if (prediction.status === 'failed') {
