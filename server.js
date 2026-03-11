@@ -81,7 +81,7 @@ app.post('/api/generate', async (req, res) => {
     const getUrl = prediction.urls.get;
 
     // Polling until finished
-    while (prediction.status !== 'succeeded' && prediction.status !== 'failed') {
+    while (['starting', 'processing'].includes(prediction.status)) {
       await new Promise(r => setTimeout(r, 2000));
       const pollRes = await fetch(getUrl, {
         headers: { 'Authorization': `Bearer ${replicateToken}` }
