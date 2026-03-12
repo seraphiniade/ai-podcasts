@@ -82,9 +82,16 @@ app.post('/api/generate', async (req, res) => {
       return res.status(500).json({ error: 'Error calling Replicate API', details: errText });
     }
 
-    let prediction = await response.json();
+    let prediction;
+    try {
+      prediction = await response.json();
+    } catch (e) {
+      console.error('Failed to parse Replicate response', e);
+      return res.status(500).json({ error: 'Invalid JSON from Replicate API' });
+    }
+    
     if (!prediction || !prediction.urls || !prediction.urls.get) {
-      return res.status(500).json({ error: 'Invalid response from Replicate', details: prediction });
+      return res.status(500).json({ error: 'Invalid response structure from Replicate', details: prediction });
     }
     const getUrl = prediction.urls.get;
 
@@ -117,7 +124,7 @@ app.post('/api/generate', async (req, res) => {
 
     // Téléchargement du MP3
     const audioRes = await fetch(audioUrl);
-    if (!audioRes.ok) throw new Error('Failed to download audio file');
+    if (!audioRes.ok) throw new Error(`Failed to download audio file: ${audioRes.status} ${audioRes.statusText}`);
     const buffer = await audioRes.arrayBuffer();
     const filename = Date.now() + '-' + Math.round(Math.random() * 100000) + '.mp3';
     const filepath = path.join(__dirname, 'public/episodes', filename);
