@@ -35,7 +35,12 @@ app.get('/api/episodes', (req, res) => {
     const dataPath = path.join(__dirname, 'data.json');
     let data = [];
     if (fs.existsSync(dataPath)) {
-      data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+      try {
+        data = (() => { try { return JSON.parse(fs.readFileSync(dataPath, 'utf8')); } catch(e) { console.error('Error parsing JSON', e); return []; } })();
+      } catch(e) {
+        console.error("Corrupted data.json, starting fresh", e);
+        data = [];
+      }
     }
     // Assurer que "likes" et "comments" existent
     data = data.map(ep => ({...ep, likes: ep.likes || 0, comments: ep.comments || []}));
@@ -49,7 +54,7 @@ app.get('/api/episodes', (req, res) => {
 app.post('/api/generate', async (req, res) => {
   try {
     const { title, author, description, text, voice } = req.body;
-    if (!title || !text) {
+    if (!title || typeof title !== 'string' || !text || typeof text !== 'string' || text.trim().length === 0) {
       return res.status(400).json({ error: 'Title and text are required' });
     }
     
@@ -122,7 +127,7 @@ app.post('/api/generate', async (req, res) => {
     const dataPath = path.join(__dirname, 'data.json');
     let data = [];
     if (fs.existsSync(dataPath)) {
-      data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+      data = (() => { try { return JSON.parse(fs.readFileSync(dataPath, 'utf8')); } catch(e) { console.error('Error parsing JSON', e); return []; } })();
     }
     
     const newEpisode = {
@@ -155,7 +160,7 @@ app.post('/api/episodes', upload.single('audioFile'), (req, res) => {
     const dataPath = path.join(__dirname, 'data.json');
     let data = [];
     if (fs.existsSync(dataPath)) {
-      data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+      data = (() => { try { return JSON.parse(fs.readFileSync(dataPath, 'utf8')); } catch(e) { console.error('Error parsing JSON', e); return []; } })();
     }
     const newEpisode = {
       id: data.length > 0 ? Math.max(...data.map(e => e.id)) + 1 : 1,
@@ -179,7 +184,7 @@ app.post('/api/episodes', upload.single('audioFile'), (req, res) => {
 app.post('/api/episodes/:id/like', (req, res) => {
   try {
     const dataPath = path.join(__dirname, 'data.json');
-    const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+    const data = (() => { try { return JSON.parse(fs.readFileSync(dataPath, 'utf8')); } catch(e) { console.error('Error parsing JSON', e); return []; } })();
     const episode = data.find(e => e.id == req.params.id);
     if (episode) {
       episode.likes = (episode.likes || 0) + 1;
@@ -197,7 +202,7 @@ app.post('/api/episodes/:id/like', (req, res) => {
 app.post('/api/episodes/:id/comment', (req, res) => {
   try {
     const dataPath = path.join(__dirname, 'data.json');
-    const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+    const data = (() => { try { return JSON.parse(fs.readFileSync(dataPath, 'utf8')); } catch(e) { console.error('Error parsing JSON', e); return []; } })();
     const episode = data.find(e => e.id == req.params.id);
     if (episode && req.body.text) {
       episode.comments = episode.comments || [];

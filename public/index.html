@@ -525,3 +525,99 @@
     </script>
 </body>
 </html>
+
+<!-- 2026 UX Trend: Ambient Interactive Environment -->
+<script>
+    const ambientCanvas = document.createElement('canvas');
+    ambientCanvas.style.position = 'fixed';
+    ambientCanvas.style.top = '0';
+    ambientCanvas.style.left = '0';
+    ambientCanvas.style.width = '100vw';
+    ambientCanvas.style.height = '100vh';
+    ambientCanvas.style.zIndex = '-2';
+    ambientCanvas.style.pointerEvents = 'none';
+    document.body.prepend(ambientCanvas);
+    const actx = ambientCanvas.getContext('2d');
+    
+    let w, h;
+    function rsz() {
+        w = ambientCanvas.width = window.innerWidth;
+        h = ambientCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', rsz);
+    rsz();
+
+    let mouse = { x: w/2, y: h/2, vx: 0, vy: 0 };
+    let lastMouse = { x: w/2, y: h/2 };
+    
+    window.addEventListener('mousemove', (e) => {
+        lastMouse.x = mouse.x;
+        lastMouse.y = mouse.y;
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+        mouse.vx = mouse.x - lastMouse.x;
+        mouse.vy = mouse.y - lastMouse.y;
+        
+        // Generate ambient sound based on movement velocity
+        if(ambientSynthCtx && ambientSynthCtx.state === 'running') {
+            const speed = Math.min(Math.sqrt(mouse.vx**2 + mouse.vy**2), 100) / 100;
+            const targetFreq = 100 + (e.clientY / h) * 400; // 100 to 500 Hz
+            droneOsc.frequency.setTargetAtTime(targetFreq, ambientSynthCtx.currentTime, 0.1);
+            droneGain.gain.setTargetAtTime(speed * 0.1, ambientSynthCtx.currentTime, 0.2);
+        }
+    });
+
+    let particles = [];
+    for(let i=0; i<50; i++) {
+        particles.push({
+            x: Math.random() * w, y: Math.random() * h,
+            vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2,
+            size: Math.random() * 3 + 1
+        });
+    }
+
+    function anim() {
+        actx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        actx.fillRect(0, 0, w, h);
+        
+        actx.fillStyle = '#ff9800';
+        particles.forEach(p => {
+            p.x += p.vx + (mouse.vx * 0.01);
+            p.y += p.vy + (mouse.vy * 0.01);
+            if(p.x < 0) p.x = w; if(p.x > w) p.x = 0;
+            if(p.y < 0) p.y = h; if(p.y > h) p.y = 0;
+            actx.beginPath();
+            actx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+            actx.fill();
+        });
+        
+        if(ambientSynthCtx && droneGain) {
+            droneGain.gain.setTargetAtTime(0, ambientSynthCtx.currentTime + 1, 1);
+        }
+        requestAnimationFrame(anim);
+    }
+    anim();
+
+    // Generative Web Audio API Setup
+    let ambientSynthCtx;
+    let droneOsc;
+    let droneGain;
+
+    document.addEventListener('click', () => {
+        if(!ambientSynthCtx) {
+            ambientSynthCtx = new (window.AudioContext || window.webkitAudioContext)();
+            droneOsc = ambientSynthCtx.createOscillator();
+            droneGain = ambientSynthCtx.createGain();
+            
+            droneOsc.type = 'triangle';
+            droneOsc.frequency.value = 200;
+            droneGain.gain.value = 0;
+            
+            droneOsc.connect(droneGain);
+            droneGain.connect(ambientSynthCtx.destination);
+            droneOsc.start();
+        } else if(ambientSynthCtx.state === 'suspended') {
+            ambientSynthCtx.resume();
+        }
+    }, {once: true});
+</script>
