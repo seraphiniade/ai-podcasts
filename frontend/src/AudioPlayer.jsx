@@ -3,13 +3,16 @@ import WaveSurfer from 'wavesurfer.js';
 import { Play, Pause, SkipForward, SkipBack, X, Volume2 } from 'lucide-react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment, MeshDistortMaterial, Sphere, OrbitControls } from '@react-three/drei';
+import * as THREE from 'three';
 
 function AudioVisualizer3D({ isPlaying, analyserRef }) {
   const meshRef = useRef();
+  const materialRef = useRef();
   const dataArray = useMemo(() => new Uint8Array(128), []);
+  const smoothedAudioData = useRef(0);
   
   useFrame(({ clock }) => {
-    if (!meshRef.current) return;
+    if (!meshRef.current || !materialRef.current) return;
     
     let audioData = 0;
     if (isPlaying && analyserRef.current) {
@@ -20,32 +23,37 @@ function AudioVisualizer3D({ isPlaying, analyserRef }) {
       audioData = sum / limit;
     }
     
-    const targetScale = isPlaying && audioData > 0 ? 1 + (audioData / 255) * 0.8 : 1;
+    // Smooth the audio data to prevent jitter
+    smoothedAudioData.current = THREE.MathUtils.lerp(smoothedAudioData.current, audioData, 0.15);
+    const smoothData = smoothedAudioData.current;
+    
+    // Scale reactivity
+    const targetScale = isPlaying && smoothData > 5 ? 1 + (smoothData / 255) * 1.2 : 1;
     const currentScale = meshRef.current.scale.x;
-    const newScale = currentScale + (targetScale - currentScale) * 0.1;
+    const newScale = THREE.MathUtils.lerp(currentScale, targetScale, 0.2);
     
     meshRef.current.scale.set(newScale, newScale, newScale);
-    meshRef.current.rotation.x = clock.getElapsedTime() * 0.3;
-    meshRef.current.rotation.y = clock.getElapsedTime() * 0.4;
+    meshRef.current.rotation.x = clock.getElapsedTime() * 0.2;
+    meshRef.current.rotation.y = clock.getElapsedTime() * 0.3;
     
-    if (meshRef.current.material) {
-      const targetDistort = isPlaying && audioData > 0 ? 0.3 + (audioData / 255) * 0.6 : 0.2;
-      meshRef.current.material.distort += (targetDistort - meshRef.current.material.distort) * 0.1;
-      
-      const targetSpeed = isPlaying && audioData > 0 ? 1 + (audioData / 255) * 3 : 0.5;
-      meshRef.current.material.speed += (targetSpeed - meshRef.current.material.speed) * 0.1;
-    }
+    // Material reactivity
+    const targetDistort = isPlaying && smoothData > 5 ? 0.3 + (smoothData / 255) * 0.8 : 0.2;
+    materialRef.current.distort = THREE.MathUtils.lerp(materialRef.current.distort || 0.2, targetDistort, 0.15);
+    
+    const targetSpeed = isPlaying && smoothData > 5 ? 1 + (smoothData / 255) * 4 : 0.5;
+    materialRef.current.speed = THREE.MathUtils.lerp(materialRef.current.speed || 0.5, targetSpeed, 0.15);
   });
 
   return (
     <Sphere ref={meshRef} args={[1.2, 64, 64]}>
       <MeshDistortMaterial
-        color="#4F46E5"
+        ref={materialRef}
+        color="#6366F1"
         envMapIntensity={1}
         clearcoat={1}
-        clearcoatRoughness={0}
-        metalness={0.8}
-        roughness={0.2}
+        clearcoatRoughness={0.1}
+        metalness={0.9}
+        roughness={0.1}
         distort={0.2}
         speed={0.5}
       />
