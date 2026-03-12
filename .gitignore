@@ -5,3 +5,4 @@ cf.log
 *.log
 gen*.js
 generate.js
+public/episodes/*
