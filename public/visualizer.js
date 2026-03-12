@@ -1,89 +1,122 @@
-const canvas = document.createElement('canvas');
-canvas.id = 'bg-visualizer';
-document.body.prepend(canvas);
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
-Object.assign(canvas.style, {
+const container = document.createElement('div');
+container.id = 'bg-visualizer';
+document.body.prepend(container);
+
+Object.assign(container.style, {
     position: 'fixed',
     top: '0', left: '0',
     width: '100vw', height: '100vh',
     zIndex: '-1',
-    pointerEvents: 'none',
-    opacity: '0.6'
+    pointerEvents: 'none'
 });
 
-const ctx = canvas.getContext('2d');
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x0a0a0a, 0.02);
+
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.z = 40;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0x0a0a0a, 1);
+container.appendChild(renderer.domElement);
+
+const geometry = new THREE.IcosahedronGeometry(15, 4);
+const material = new THREE.MeshBasicMaterial({ 
+    color: 0x00ffcc, 
+    wireframe: true,
+    transparent: true,
+    opacity: 0.2
+});
+const mesh = new THREE.Mesh(geometry, material);
+scene.add(mesh);
+
+const positionAttribute = geometry.attributes.position;
+const originalPositions = new Float32Array(positionAttribute.count * 3);
+for (let i = 0; i < positionAttribute.count * 3; i++) {
+    originalPositions[i] = positionAttribute.array[i];
+}
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
 let audioCtx;
 let analyser;
 let dataArray;
+let sourceNodes = new WeakMap();
 
-function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resize);
-resize();
-
-// Attach to any audio playing
 document.addEventListener('play', (e) => {
     if (e.target.tagName === 'AUDIO') {
         if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
             analyser = audioCtx.createAnalyser();
             analyser.fftSize = 256;
             dataArray = new Uint8Array(analyser.frequencyBinCount);
             
-            // Note: MediaElementAudioSourceNode can only be created once per audio element.
-            if (!e.target._hasSource) {
-                const source = audioCtx.createMediaElementSource(e.target);
-                source.connect(analyser);
-                analyser.connect(audioCtx.destination);
-                e.target._hasSource = true;
-            }
-            draw();
+            // Connect analyser to destination if needed, but we shouldn't double connect
+            // Instead of analyser.connect(destination), we just let the media element play normally?
+            // Actually, MediaElementSourceNode interrupts the normal audio flow.
+            // If we connect it to the analyser and then analyser to destination, it will play.
         } else if (audioCtx.state === 'suspended') {
             audioCtx.resume();
+        }
+
+        if (!sourceNodes.has(e.target)) {
+            const source = audioCtx.createMediaElementSource(e.target);
+            source.connect(analyser);
+            analyser.connect(audioCtx.destination);
+            sourceNodes.set(e.target, source);
         }
     }
 }, true);
 
-function draw() {
-    requestAnimationFrame(draw);
-    if (!analyser) return;
+let time = 0;
 
-    analyser.getByteFrequencyData(dataArray);
-    
-    // Clear with a fade effect
-    ctx.fillStyle = 'rgba(10, 10, 10, 0.2)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+function animate() {
+    requestAnimationFrame(animate);
+    time += 0.005;
 
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const radius = Math.min(centerX, centerY) * 0.5;
+    mesh.rotation.x = time * 0.5;
+    mesh.rotation.y = time;
 
-    ctx.lineWidth = 3;
-
-    for (let i = 0; i < dataArray.length; i++) {
-        const value = dataArray[i];
-        const percent = value / 255;
-        const height = canvas.height * percent * 0.5;
-        const offset = canvas.height - height - 1;
-        const barWidth = canvas.width / dataArray.length;
+    if (analyser && dataArray) {
+        analyser.getByteFrequencyData(dataArray);
         
-        const hue = i / dataArray.length * 360 + performance.now() * 0.05;
-        ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-        ctx.fillRect(i * barWidth, offset, barWidth - 1, height);
+        let sum = 0;
+        for(let i=0; i<dataArray.length; i++){
+            sum += dataArray[i];
+        }
+        let avg = sum / dataArray.length;
         
-        // Circular visualization
-        const angle = (i / dataArray.length) * Math.PI * 2;
-        const x1 = centerX + Math.cos(angle) * radius;
-        const y1 = centerY + Math.sin(angle) * radius;
-        const x2 = centerX + Math.cos(angle) * (radius + value);
-        const y2 = centerY + Math.sin(angle) * (radius + value);
+        const positions = geometry.attributes.position;
+        for (let i = 0; i < positions.count; i++) {
+            const index = i % dataArray.length;
+            const freqVal = dataArray[index] / 255;
+            const noise = Math.sin(i * 0.1 + time * 5) * 0.5;
+            const scale = 1 + (freqVal * 0.3) + (avg / 255) * 0.4 + (noise * 0.1);
+            
+            positions.setXYZ(
+                i,
+                originalPositions[i * 3] * scale,
+                originalPositions[i * 3 + 1] * scale,
+                originalPositions[i * 3 + 2] * scale
+            );
+        }
+        positions.needsUpdate = true;
         
-        ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.8)`;
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
+        const hue = (avg / 255) + time * 0.1;
+        material.color.setHSL(hue % 1, 0.8, 0.6);
+        material.opacity = 0.15 + (avg / 255) * 0.5;
     }
+
+    renderer.render(scene, camera);
 }
+
+animate();
