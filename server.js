@@ -83,6 +83,9 @@ app.post('/api/generate', async (req, res) => {
     }
 
     let prediction = await response.json();
+    if (!prediction || !prediction.urls || !prediction.urls.get) {
+      return res.status(500).json({ error: 'Invalid response from Replicate', details: prediction });
+    }
     const getUrl = prediction.urls.get;
 
     // Polling until finished

@@ -486,9 +486,20 @@
         let panner = null;
         let aarInterval = null;
 
-        function initAudio(audioElement) {
+        let audioWorkletNode = null;
+
+        async function initAudio(audioElement) {
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // 2026 Trend: Load AudioWorklet for separate thread DSP
+                try {
+                    await audioContext.audioWorklet.addModule('audio-processor.js');
+                    audioWorkletNode = new AudioWorkletNode(audioContext, 'analog-warmth-processor');
+                } catch(e) {
+                    console.error("Failed to initialize AudioWorklet", e);
+                }
+
                 analyser = audioContext.createAnalyser();
                 analyser.fftSize = 128;
                 dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -525,7 +536,13 @@
             if (!sourceNodes.has(audioElement)) {
                 try {
                     const source = audioContext.createMediaElementSource(audioElement);
-                    source.connect(analyser);
+                    
+                    if (audioWorkletNode) {
+                        source.connect(audioWorkletNode);
+                        audioWorkletNode.connect(analyser);
+                    } else {
+                        source.connect(analyser);
+                    }
                     
                     // Route to spatial panner instead of directly to destination
                     analyser.connect(panner);
