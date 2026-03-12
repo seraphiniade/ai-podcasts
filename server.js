@@ -116,7 +116,7 @@ app.post('/api/generate', async (req, res) => {
     const audioRes = await fetch(audioUrl);
     if (!audioRes.ok) throw new Error('Failed to download audio file');
     const buffer = await audioRes.arrayBuffer();
-    const filename = Date.now() + '.mp3';
+    const filename = Date.now() + '-' + Math.round(Math.random() * 100000) + '.mp3';
     const filepath = path.join(__dirname, 'public/episodes', filename);
     if (!fs.existsSync(path.dirname(filepath))) {
       fs.mkdirSync(path.dirname(filepath), { recursive: true });
